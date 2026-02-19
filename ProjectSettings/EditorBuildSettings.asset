@@ -1,0 +1,13 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes: []
+  m_configObjects:
+    Unity.XR.OpenVR.Settings: {fileID: 11400000, guid: 4218242b664fe194a911d51aa3888161, type: 2}
+    Unity.XR.PICO.LivePreview.Settings: {fileID: 11400000, guid: cbceee517caaa3c4a862e256c6fd5f62, type: 2}
+    Unity.XR.PXR.Settings: {fileID: 11400000, guid: 6997e2569c411944790c54a72b318949, type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 7f99139972ca2154ba231758a5fd0a0c, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 747e560eb6f7ae14ba4a235cad18c754, type: 2}
