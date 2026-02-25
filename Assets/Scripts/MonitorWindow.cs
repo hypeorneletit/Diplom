@@ -395,10 +395,17 @@ public class MonitorWindow : MonoBehaviour
         for (int i = 0; i < servers.Length; i++)
         {
             var server = servers[i];
+
+            // Используем пользовательское имя, если задано, иначе дефолтное "Сервер N"
+            string name = string.IsNullOrEmpty(server.displayName)
+                ? $"Сервер {i + 1}"
+                : server.displayName;
+
             string statusText = GetStatusText(server.status);
             string statusColor = GetStatusColor(server.status);
 
-            sb.AppendLine($"<size={fontSize - 2}>Сервер {i + 1}: {server.temperature:F1}°C | CPU: {server.cpuLoad:F0}% | <color={statusColor}>{statusText}</color></size>");
+            sb.AppendLine(
+                $"<size={fontSize - 2}>{name}: {server.temperature:F1}°C | CPU: {server.cpuLoad:F0}% | <color={statusColor}>{statusText}</color></size>");
         }
 
         serverListText.text = sb.ToString();

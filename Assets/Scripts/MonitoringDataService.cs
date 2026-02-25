@@ -38,11 +38,25 @@ public class MonitoringDataService : MonoBehaviour
         public float cpuLoad;
         public ServerStatus status;
 
+        // Дополнительные настраиваемые параметры
+        public string displayName;
+        public bool manualOverride;
+        public ServerStatus manualStatus;
+
+        // Ручной контроль нагрузки CPU
+        public bool manualCpuOverride;
+        public float manualCpuLoad;
+
         public ServerData()
         {
             temperature = 0f;
             cpuLoad = 0f;
             status = ServerStatus.Normal;
+            displayName = string.Empty;
+            manualOverride = false;
+            manualStatus = ServerStatus.Normal;
+            manualCpuOverride = false;
+            manualCpuLoad = 0f;
         }
     }
 
@@ -115,8 +129,28 @@ public class MonitoringDataService : MonoBehaviour
             float cpuNoiseValue = Mathf.PerlinNoise(cpuNoiseX, cpuNoiseY);
             servers[i].cpuLoad = Mathf.Lerp(cpuLoadMin, cpuLoadMax, cpuNoiseValue);
 
-            // Определение статуса
-            servers[i].status = DetermineStatus(servers[i].temperature);
+            // При включённом ручном контроле CPU используем значение из интерфейса
+            if (servers[i].manualCpuOverride)
+            {
+                servers[i].cpuLoad = Mathf.Clamp(servers[i].manualCpuLoad, cpuLoadMin, cpuLoadMax);
+            }
+
+            // Автоматически определяем статус сначала по температуре
+            ServerStatus autoStatus = DetermineStatus(servers[i].temperature);
+
+            // Дополнительно учитываем текущую нагрузку CPU (после возможного ручного override):
+            // высокое CPU должно давать Warning/Critical даже в авто-режиме статуса.
+            if (servers[i].cpuLoad >= 90f)
+            {
+                autoStatus = ServerStatus.Critical;
+            }
+            else if (servers[i].cpuLoad >= 70f)
+            {
+                autoStatus = ServerStatus.Warning;
+            }
+
+            // Если включён ручной override статуса, используем его, иначе авто-статус
+            servers[i].status = servers[i].manualOverride ? servers[i].manualStatus : autoStatus;
 
             // Событие при изменении статуса
             if (oldStatus != servers[i].status)
@@ -171,5 +205,66 @@ public class MonitoringDataService : MonoBehaviour
     public float GetMainRoomTemperature()
     {
         return mainRoomTemperature;
+    }
+
+    // Публичные методы для изменения данных из интерфейсов
+
+    /// <summary>
+    /// Установить отображаемое имя сервера.
+    /// </summary>
+    public void SetServerDisplayName(int index, string name)
+    {
+        if (index < 0 || index >= servers.Length)
+            return;
+
+        servers[index].displayName = name;
+        OnDataUpdated?.Invoke();
+    }
+
+    /// <summary>
+    /// Включить/выключить ручной статус сервера.
+    /// Если override включен, статус берётся из параметра status.
+    /// Если выключен, статус снова считается автоматически по температуре.
+    /// </summary>
+    public void SetServerManualStatus(int index, bool enableOverride, ServerStatus status)
+    {
+        if (index < 0 || index >= servers.Length)
+            return;
+
+        ServerData data = servers[index];
+        ServerStatus oldStatus = data.status;
+
+        data.manualOverride = enableOverride;
+        data.manualStatus = status;
+
+        // Пересчитываем текущий статус с учётом override
+        ServerStatus autoStatus = DetermineStatus(data.temperature);
+        data.status = data.manualOverride ? data.manualStatus : autoStatus;
+
+        if (oldStatus != data.status)
+        {
+            OnServerStatusChanged?.Invoke(index, oldStatus, data.status);
+        }
+
+        OnDataUpdated?.Invoke();
+    }
+
+    /// <summary>
+    /// Включить/выключить ручной контроль нагрузки CPU и установить её значение.
+    /// Если override включен, cpuLoad будет зафиксирован на переданном значении.
+    /// Если выключен, cpuLoad снова берётся из Perlin Noise.
+    /// </summary>
+    public void SetServerManualCpuLoad(int index, bool enableOverride, float cpuLoad)
+    {
+        if (index < 0 || index >= servers.Length)
+            return;
+
+        ServerData data = servers[index];
+        data.manualCpuOverride = enableOverride;
+        data.manualCpuLoad = cpuLoad;
+
+        // Пересчитываем всё сразу, чтобы слушатели увидели актуальные значения
+        UpdateAllData();
+        OnDataUpdated?.Invoke();
     }
 }
